@@ -67,5 +67,33 @@ extension String {
         
         return toReturn
     }
+        func simdIndicesOfARM(substring: String) -> Array<Int>{
+        var toReturn = Array<Int>()
+        var inputToUse = self
+        // lousy hack that was needed as we don't know the length of the string beforehand
+        while(Int(Float(inputToUse.count).truncatingRemainder(dividingBy: 16.0)) != 0){
+            inputToUse = inputToUse + " "
+        }
+        var inputInInteger = Array(inputToUse.utf8)
+        let substringInInteger = Array(substring.utf8)
+        for _ in 1..<substring.count{
+            inputInInteger.append(32)
+        }
+        let F = vdupq_n_u8(UInt8 (substringInInteger[0]))
+        let L = vdupq_n_u8(UInt8(substringInInteger[substring.count-1]))
+        for i in 1..<((inputToUse.count - 1 + 16) / 16)+1 {
+            let A = SIMD16<UInt8>(inputInInteger[16 * (i-1)...(16 * i) - 1])
+            let B = SIMD16<UInt8>(inputInInteger[(16 * (i-1))+(substring.count-1)...((16 * i) - 1)+(substring.count-1)])
+            let maskResult = vandq_u8(vceqq_u8(A,F),vceqq_u8(B,L))
+            if(vaddvq_u8(maskResult) > 0){
+                for j in 0..<16{
+                    if(maskResult[j] == 255){
+                        toReturn.append((i-1)*16+j)
+                    }
+                }
+            }
+        }
+        return toReturn
+    }
 
 }
